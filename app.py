@@ -1,8 +1,11 @@
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher, F
 from aiogram.filters import Command
-from aiogram.types import Message
+from aiogram.types import Message, ContentType
+
 from dotenv import load_dotenv
 import os
+from pprint import pprint
+
 
 load_dotenv('.env')
 BOT_TOKEN = os.getenv('TOKEN')
@@ -23,13 +26,18 @@ async def process_help_command(message: Message):
     )
 
 
-@dp.message()
+async def send_photo_echo(message: Message):
+    pprint(message)
+    await message.reply_photo(message.photo[0].file_id)
+
+
 async def send_echo(message: Message):
     await message.reply(text=message.text)
 
 
 dp.message.register(process_start_command, Command(commands=['start']))
 dp.message.register(process_help_command, Command(commands=['help']))
+dp.message.register(send_photo_echo, F.content_type == ContentType.PHOTO)
 dp.message.register(send_echo)
 
 if __name__ == '__main__':
