@@ -34,6 +34,11 @@ def generate_num_from_100() -> int:
     return randint(0, 100)
 
 
+@dp.message(~F.text.startswith('привет'))
+async def process_hello(message: Message):
+    await message.answer(text='И тебе привет!')
+
+
 async def process_start_command(message: Message):
     check_user_in_base(message)
     await message.answer(
