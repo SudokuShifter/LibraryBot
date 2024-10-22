@@ -1,6 +1,6 @@
 from aiogram import Bot, Dispatcher, F
-from aiogram.filters import Command
-from aiogram.types import Message, ContentType
+from aiogram.filters import Command, CommandStart
+from aiogram.types import Message
 
 from dotenv import load_dotenv
 import os
@@ -16,13 +16,18 @@ dp = Dispatcher()
 
 ATTEMPTS = 5
 
-user = {
-    'in_game': False,
-    'secret_number': None,
-    'attempts': None,
-    'total_games': 0,
-    'wins': 0
-}
+users = {}
+
+
+def check_user_in_base(message: Message):
+    if message.from_user.id not in users:
+        users[message.from_user.id] = {
+            'in_game': False,
+            'secret_number': None,
+            'attempts': None,
+            'total_games': 0,
+            'wins': 0
+        }
 
 
 def generate_num_from_100() -> int:
@@ -30,6 +35,7 @@ def generate_num_from_100() -> int:
 
 
 async def process_start_command(message: Message):
+    check_user_in_base(message)
     await message.answer(
         'Привет!\nДавайте сыграем в игру "Угадай число"?\n\n'
         'Чтобы получить правила игры и список доступных '
@@ -48,6 +54,7 @@ async def process_help_command(message: Message):
 
 
 async def process_stat_command(message: Message):
+    user = users[message.from_user.id]
     await message.answer(
         f'Всего иго сыграно: {user["total_games"]}\n'
         f'Игр выиграно: {user["wins"]}'
@@ -55,6 +62,7 @@ async def process_stat_command(message: Message):
 
 
 async def process_cancel_command(message: Message):
+    user = users[message.from_user.id]
     if user['in_game']:
         user['in_game'] = False
         await message.answer(
@@ -69,10 +77,11 @@ async def process_cancel_command(message: Message):
 
 
 async def process_positive_answer(message: Message):
+    user = users[message.from_user.id]
     if not user['in_game']:
-        user['in_game'] = True
         user['secret_number'] = generate_num_from_100()
         user['attempts'] = ATTEMPTS
+        user['in_game'] = True
         await message.answer(
             'Ура!\nЯ загадал число от 1 до 100, '
             'попробуй угадать!'
@@ -86,7 +95,7 @@ async def process_positive_answer(message: Message):
 
 
 async def process_negative_answer(message: Message):
-    if not user['in_game']:
+    if not users[message.from_user.id]['in_game']:
         await message.answer(
             'Жаль :(\n\nЕсли захотите поиграть - просто '
             'напишите об этом'
@@ -99,6 +108,7 @@ async def process_negative_answer(message: Message):
 
 
 async def process_numbers_answer(message: Message):
+    user = users[message.from_user.id]
     user_num = int(message.text)
     if user['in_game']:
         if user_num == user['secret_number']:
@@ -114,7 +124,7 @@ async def process_numbers_answer(message: Message):
             await message.reply(
                 'Моё число меньше'
             )
-        elif user_num > user['secret_number']:
+        elif user_num < user['secret_number']:
             user['attempts'] -= 1
             await message.reply(
                 'Моё число больше'
@@ -136,7 +146,7 @@ async def process_numbers_answer(message: Message):
 
 
 async def process_other_answer(message: Message):
-    if user['in_game']:
+    if users[message.from_user.id]['in_game']:
         await message.answer(
             'Мы же сейчас с вами играем. '
             'Присылайте числа от 1 до 100'
@@ -148,13 +158,19 @@ async def process_other_answer(message: Message):
         )
 
 
-dp.message.register(process_start_command, Command(commands=['start']))
+dp.message.register(process_start_command, CommandStart())
 dp.message.register(process_help_command, Command(commands=['help']))
 dp.message.register(process_stat_command, Command(commands=['stat']))
 dp.message.register(process_cancel_command, Command(commands=['cancel']))
-dp.message.register(process_positive_answer, F.text.lower().in_(['да', 'давай', 'сграем', 'игра', 'играть', 'хочу играть']))
-dp.message.register(process_negative_answer, F.text.lower().in_(['нет', 'не', 'не хочу', 'не буду']))
-dp.message.register(process_numbers_answer, lambda x: x.text and x.text.isdigit() and 1 <= int(x.text) <= 100)
+dp.message.register(process_positive_answer, F.text.lower().in_(
+    ['да', 'давай', 'сграем', 'игра', 'играть', 'хочу играть'])
+    )
+dp.message.register(process_negative_answer, F.text.lower().in_(
+    ['нет', 'не', 'не хочу', 'не буду'])
+    )
+dp.message.register(process_numbers_answer, 
+                    lambda x: x.text and x.text.isdigit()
+                    and 1 <= int(x.text) <= 100)
 dp.message.register(process_other_answer)
 
 
