@@ -3,13 +3,15 @@ from aiogram.filters import Command, CommandStart
 from aiogram.types import Message
 
 from dotenv import load_dotenv
-import os
+from environs import Env
 from pprint import pprint
 from random import randint
 
 
-load_dotenv('.env')
-BOT_TOKEN = os.getenv('TOKEN')
+env = Env()
+env.read_env()
+
+BOT_TOKEN = env('TOKEN')
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
